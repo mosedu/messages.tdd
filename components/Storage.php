@@ -25,7 +25,8 @@ token data:
     'refresh_token' => $sRefresh,
 */
 
-class Storage extends yii\base\Object {
+class Storage extends yii\base\Object
+{
     const SESSION_DATA_KEY = 'user-data'; // ключик для сохранения данных в сессии
     const SESSION_API_KEY = 'user-api-key'; // ключик для сохранения api key в сессии
 
@@ -33,11 +34,14 @@ class Storage extends yii\base\Object {
     public $authPath = '/oauthmodule/credential/token';
     public $dataPath = '/v1/user/info';
 
+    public $store = null;
 
-    public function getUser($id = null) {
-        if( $id === null ) {
+
+    public function getUser($id = null)
+    {
+        if ($id === null) {
             // возвращаем текущего пользователя
-            if( !Yii::$app->session->has(self::SESSION_DATA_KEY) ) {
+            if (!Yii::$app->session->has(self::SESSION_DATA_KEY)) {
                 throw new InvalidValueException('User data not found');
 //                return Yii::$app->session->get(self::SESSION_DATA_KEY, []);
             }
@@ -46,9 +50,10 @@ class Storage extends yii\base\Object {
         return $this->loadUser($id);
     }
 
-    public function loadUser($id) {
+    public function loadUser($id)
+    {
         $client = new Client();
-        try{
+        try {
             $res = $client->request(
                 'GET',
                 $this->remoteHost . $this->dataPath,
@@ -56,26 +61,20 @@ class Storage extends yii\base\Object {
                     'auth' => $this->getApiKey(),
                 ]
             );
-        }
-
-        catch(ServerException $e) {
-            Yii::error('Error loadUser('.$id.'): ServerException ' . $e->getMessage());
+        } catch (ServerException $e) {
+            Yii::error('Error loadUser(' . $id . '): ServerException ' . $e->getMessage());
             // тут что-то с сервером, нужно будет подождать До очередного запроса
             return 'Server error';
-        }
-
-        catch(ClientException $e) {
-            Yii::error('Error loadUser('.$id.'): ClientException ' . $e->getMessage());
+        } catch (ClientException $e) {
+            Yii::error('Error loadUser(' . $id . '): ClientException ' . $e->getMessage());
             $res = $e->getResponse();
             $aData = json_decode($res->getBody()->getContents(), true);
-            if( is_array($aData) && isset($aData['status']) && ($aData['status'] < 500) ) {
+            if (is_array($aData) && isset($aData['status']) && ($aData['status'] < 500)) {
                 // тут пользователь отключен, нужно убить все права
             }
             return $aData;
-        }
-
-        catch(\Exception $e) {
-            Yii::error('Error loadUser('.$id.'): Exception ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Yii::error('Error loadUser(' . $id . '): Exception ' . $e->getMessage());
             return $e->getMessage();
         }
 
@@ -83,68 +82,121 @@ class Storage extends yii\base\Object {
     }
 
     /**
-     * Получаем текущий token из сессии
+     * Получаем данные по токену из хранилища
      * @return string
      */
-    public function getApiKey() {
-        if( !Yii::$app->session->has(self::SESSION_API_KEY) ) {
-            throw new InvalidValueException('Not found Api key');
+    public function getTokenData()
+    {
+        if ($this->store === null) {
+            throw new InvalidValueException('Not found storage for API token');
         }
 
-        $aKey = Yii::$app->session->get(self::SESSION_API_KEY);
+        if (!$this->store->has(self::SESSION_API_KEY)) {
+            throw new InvalidValueException('Not found Api token');
+        }
 
-        if( $aKey['expires_in'] > time() ) {
+        return $this->store->get(self::SESSION_API_KEY);
+    }
+
+    /**
+     * Кладем данные по токену в хранилище
+     * @param array $aData
+     * @return string
+     */
+    public function setTokenData($aData)
+    {
+        if ($this->store === null) {
+            throw new InvalidValueException('Not found storage for API token');
+        }
+
+        return $this->store->set(self::SESSION_API_KEY, $aData);
+    }
+
+    /**
+     * Получаем текущий token из сессии или обновляем его
+     * @return string
+     */
+    public function getApiToken()
+    {
+        $aKey = $this->getTokenData();
+
+        if( $this->isTokenExpired($aKey) ) {
             // TODO: обработать 'expires_in'
-            $client = new Client();
-            $parameters = array(
-                'grant_type'    => 'refresh_token',
-                'type'          => 'web_server',
-                'client_id'     => $_SERVER['HTTP_HOST'],
-                'client_secret' => '',
-                'refresh_token' => $aKey['refresh_token'],
-            );
-
-            try{
-                $res = $client->request(
-                    'GET',
-                    $this->remoteHost . $this->authPath,
-                    [
-                        'form_params' => $parameters,
-                    ]
-                );
-            }
-
-            catch(ServerException $e) {
-                Yii::error('Error getApiKey(): refresh token '.$aKey['refresh_token'].' ServerException ' . $e->getMessage());
-                // тут что-то с сервером, нужно будет подождать До очередного запроса
-                return 'Server error';
-            }
-
-            catch(ClientException $e) {
-                Yii::error('Error getApiKey(): refresh token '.$aKey['refresh_token'].' ClientException ' . $e->getMessage());
-                $res = $e->getResponse();
-                $aData = json_decode($res->getBody()->getContents(), true);
-                if( is_array($aData) && isset($aData['status']) && ($aData['status'] < 500) ) {
-                    // тут пользователь отключен, нужно убить все права
-                }
-                return $aData;
-            }
-
-            catch(\Exception $e) {
-                Yii::error('Error getApiKey(): refresh token '.$aKey['refresh_token'].' Exception ' . $e->getMessage());
-                return $e->getMessage();
+            $aKey = $this->refreshToken($aKey);
+            $this->setTokenData($aKey);
+            if( !isset($aKey['access_token']) ) {
+                throw new InvalidValueException('Not found token');
             }
         }
-
         return $aKey['access_token'];
     }
 
-    public function remoteLogin($username, $password) {
-        if( Yii::$app->session->has(self::SESSION_API_KEY) ) {
-            return Yii::$app->session->get(self::SESSION_API_KEY);
+    /**
+     * Токен протух?
+     * @param array $aData
+     * @return string
+     */
+    public function isTokenExpired($aData)
+    {
+        if( !isset($aData['expires_in']) ) {
+            throw new InvalidValueException('Not found token expired time');
+        }
+        return ($aData['expires_in'] > time());
+    }
+
+    /**
+     *
+     * Обновление токена
+     *
+     * @param array $aData
+     * @return array
+     */
+    public function refreshToken($aData) {
+        if( !isset($aData['refresh_token']) ) {
+            throw new InvalidValueException('Not found refresh token');
         }
 
-        $client = new Client();
+        $parameters = array(
+            'grant_type' => 'refresh_token',
+            'type' => 'web_server',
+            'client_id' => $_SERVER['HTTP_HOST'],
+            'client_secret' => '',
+            'refresh_token' => $aData['refresh_token'],
+        );
+
+        $aKey = $aData;
+
+        $res = $this->makeRequest([
+            'method' => 'GET',
+            'url' => $this->remoteHost . $this->authPath,
+            'data' => $parameters,
+        ]);
+
+        if ($res['statuscode'] == 200) {
+            $aKey = json_decode($res['response']->getBody()->getContents(), true);
+            Yii::info('refreshToken(): refresh token aKey = ' . print_r($aKey, true));
+            $aKey['expires_in'] = time() + $aKey['expires_in'];
+        } else {
+            if ($aData['statuscode'] < 500) {
+                // тут пользователь отключен, нужно убить все права
+                $aKey = [];
+            } else {
+                // тут что-то с сервером, нужно будет подождать До очередного запроса
+            }
+        }
+        return $aKey;
+    }
+
+    /**
+     *
+     * Получение токена по логину и паролю
+     *
+     * @param $username
+     * @param $password
+     * @return array
+     */
+    public function remoteLogin($username, $password) {
+        Yii::info('remoteLogin('.$username.', '.$password.')');
 
         $bodyParams = array(
             'client_id'     => $_SERVER['HTTP_HOST'],
@@ -154,42 +206,28 @@ class Storage extends yii\base\Object {
             'grant_type'    => 'password',
         );
 
-        try{
-//            $res = $client->post(
-            $res = $client->request(
-                'POST',
-                $this->remoteHost . $this->authPath,
-                [
-                    'form_params' => $bodyParams,
-                ]
-            );
-        }
+        $aKey = [];
 
-        catch(ServerException $e) {
-            Yii::error('Error remoteLogin('.$username.'): ServerException ' . $e->getMessage());
+        $aData = $this->makeRequest([
+            'method' => 'POST',
+            'url' => $this->remoteHost . $this->authPath,
+            'data' => $bodyParams,
+        ]);
+
+        if( $aData['statuscode'] == 200 ) {
+            $aKey = json_decode($aData['response']->getBody()->getContents(), true);
+            Yii::info('remoteLogin() aKey = ' . print_r($aKey, true));
+            $aKey['expires_in'] = time() + $aKey['expires_in'];
+        }
+        else  if($aData['statuscode'] < 500) {
+            // тут пользователь отключен, нужно убить все права
+            $aKey = [];
+        }
+        else {
             // тут что-то с сервером, нужно будет подождать До очередного запроса
-            return 'Server error';
         }
 
-        catch(ClientException $e) {
-            Yii::error('Error remoteLogin('.$username.'): ClientException ' . $e->getMessage());
-            $res = $e->getResponse();
-            $aData = json_decode($res->getBody()->getContents(), true);
-            if( is_array($aData) && isset($aData['status']) && ($aData['status'] < 500) ) {
-                // тут пользователь отключен, нужно убить все права
-            }
-            return $aData;
-        }
-
-        catch(\Exception $e) {
-            Yii::error('Error remoteLogin('.$username.'): Exception ' . $e->getMessage());
-            return $e->getMessage();
-        }
-//        $aData = json_decode((string) $res->getBody(), true);
-        $aData = json_decode($res->getBody()->getContents(), true);
-        $aData['expires_in'] = time() + $aData['expires_in'];
-        Yii::$app->session->set(self::SESSION_API_KEY, $aData);
-        return $aData;
+        return $aKey;
     }
 
 
@@ -203,8 +241,19 @@ class Storage extends yii\base\Object {
      * @return array
      */
     public function makeRequest($param) {
+        Yii::info('makeRequest() ' . print_r($param, true));
+        $aData = [
+            'response' => null,
+            'statuscode' => 0,
+        ];
+
+        if( !isset($param['url']) ) {
+            return $aData;
+        }
+
         $defaultParam = [
             'method' => 'GET',
+            'data' => [],
             'headers' => [],
         ];
 
@@ -214,9 +263,8 @@ class Storage extends yii\base\Object {
             }
         }
 
-
         $client = new Client();
-        Yii::trace('makeRequest('.$param['method'].', '.$param['url'].')' . "\n" . print_r($param['data'], true) . "\n" . print_r($param['headers'], true));
+//        Yii::info('makeRequest('.$param['method'].', '.$param['url'].')' . "\n" . print_r($param['data'], true) . "\n" . print_r($param['headers'], true));
 
         try{
             $aDop = [];
@@ -235,27 +283,39 @@ class Storage extends yii\base\Object {
                 $param['url'],
                 $aDop
             );
+
+            $aData = [
+                'response' => $res, // $res->getBody()->getContents()
+                'statuscode' => $res->getStatusCode(),
+            ];
         }
 
         catch(ServerException $e) {
             Yii::error('Error makeRequest(): ServerException ' . $e->getMessage());
             // тут что-то с сервером, нужно будет подождать До очередного запроса
-            return 'Server error';
+            $res = $e->getResponse();
+            $aData = [
+                'response' => $res,
+                'statuscode' => $res->getStatusCode(),
+            ];
         }
 
         catch(ClientException $e) {
+            // тут ошибка при запросе - когда нет прав на доступ
             Yii::error('Error makeRequest(): ClientException ' . $e->getMessage());
             $res = $e->getResponse();
-            $aData = json_decode($res->getBody()->getContents(), true);
-            if( is_array($aData) && isset($aData['status']) && ($aData['status'] < 500) ) {
-                // тут пользователь отключен, нужно убить все права
-            }
-            return $aData;
+            $aData = [
+                'response' => $res,
+                'statuscode' => $res->getStatusCode(),
+            ];
         }
 
         catch(\Exception $e) {
             Yii::error('Error makeRequest(): Exception ' . $e->getMessage());
-            return $e->getMessage();
         }
+
+//        Yii::info('makeRequest(): return data = ' . print_r($aData, true));
+
+        return $aData;
     }
 }

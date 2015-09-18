@@ -10,7 +10,7 @@ use Codeception\Specify;
 class LoginFormTest extends TestCase
 {
     use Specify;
-
+/*
     protected function tearDown()
     {
         Yii::$app->user->logout();
@@ -57,5 +57,5 @@ class LoginFormTest extends TestCase
             expect('user should be logged in', Yii::$app->user->isGuest)->false();
         });
     }
-
+*/
 }
