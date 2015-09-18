@@ -88,10 +88,12 @@ class Storage extends yii\base\Object
     public function getTokenData()
     {
         if ($this->store === null) {
+            Yii::info('setTokenData($aData): error no storage for API token');
             throw new InvalidValueException('Not found storage for API token');
         }
 
         if (!$this->store->has(self::SESSION_API_KEY)) {
+            Yii::info('setTokenData($aData): error Not found Api token');
             throw new InvalidValueException('Not found Api token');
         }
 
@@ -106,9 +108,11 @@ class Storage extends yii\base\Object
     public function setTokenData($aData)
     {
         if ($this->store === null) {
+            Yii::info('setTokenData($aData): error no storage');
             throw new InvalidValueException('Not found storage for API token');
         }
 
+        Yii::info('setTokenData(): ' . print_r($aData, true));
         return $this->store->set(self::SESSION_API_KEY, $aData);
     }
 
@@ -141,7 +145,8 @@ class Storage extends yii\base\Object
         if( !isset($aData['expires_in']) ) {
             throw new InvalidValueException('Not found token expired time');
         }
-        return ($aData['expires_in'] > time());
+        Yii::info('isTokenExpired(): ' . $aData['expires_in'] . ' > ' . time() . ' -> ' . ($aData['expires_in'] > time() ? 'true' : 'false'));
+        return ($aData['expires_in'] < time());
     }
 
     /**
@@ -270,7 +275,11 @@ class Storage extends yii\base\Object
             $aDop = [];
 
             if( count($param['data']) > 0 ) {
-                $aDop['form_params'] = $param['data'];
+                $sName = 'form_params';
+                if( strtolower($param['method']) !== 'post' ) {
+                    $sName = 'query';
+                }
+                $aDop[$sName] = $param['data'];
             }
 
             if( count($param['headers']) > 0 ) {
@@ -278,6 +287,7 @@ class Storage extends yii\base\Object
             }
 
 
+            Yii::info('makeRequest('.$param['method'].', '.$param['url'].') ' . print_r($aDop, true));
             $res = $client->request(
                 $param['method'],
                 $param['url'],

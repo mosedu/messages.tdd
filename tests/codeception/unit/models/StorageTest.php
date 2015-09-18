@@ -90,6 +90,11 @@ class StorageTest extends TestCase
         $a = $ob->getTokenData();
 
         $this->assertEquals($ob->getApiToken(), $a['access_token'], 'Get token string');
+
+        $a['expires_in'] -= 36000;
+        $ob->setTokenData($a);
+
+        $this->assertFalse($ob->getApiToken() == $a['access_token'], 'Get new token string after refresh');
     }
 
     public function goodRequestDataProvider() {
