@@ -10,10 +10,12 @@ use yii\db\ActiveQueryInterface;
 use app\components\Storage;
 use app\models\Department;
 use app\models\Depusers;
+use app\models\RapidTrait;
 
 class User extends \yii\base\Model implements \yii\web\IdentityInterface
 {
-    public $_storage = null;
+    use RapidTrait;
+//    public $_storage = null;
 
     private $_related = [];
 
@@ -117,118 +119,6 @@ class User extends \yii\base\Model implements \yii\web\IdentityInterface
         }
     }
 */
-    /**
-     * @inheritdoc
-     */
-    public static function findIdentity($id)
-    {
-        $user = null;
-        $ob = new Storage();
-        $aData = $ob->getUser();
-        if( count($aData) != 0 ) {
-            $user = new static();
-            $user->_storage = $ob;
-        }
-        return $user;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public static function findIdentityByAccessToken($token, $type = null)
-    {
-        $user = null;
-        $ob = new Storage();
-        try {
-            if( $ob->getApiToken() == $token ) {
-                $user = new static();
-                $user->_storage = $ob;
-            }
-        }
-        catch(\Exception $e) {
-            //
-        }
-
-        return $user;
-    }
-
-    /**
-     * Finds user by username
-     *
-     * @param  string      $username
-     * @return static|null
-     */
-    public static function findByUsername($username, $password)
-    {
-        $user = null;
-        $ob = new Storage();
-        try {
-            $aData = $ob->getUserByUsername($username, $password);
-            $user = new static();
-            $user->_storage = $ob;
-        }
-        catch(\Exception $e) {
-            //
-        }
-
-        return $user;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getId()
-    {
-        try {
-            $id = $this->us_id;
-        }
-        catch(\Exception $e) {
-            $id = 0;
-        }
-        return $id;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getAuthKey()
-    {
-        try {
-            $token = $this->_storage->getApiToken();
-        }
-        catch(\Exception $e) {
-            $token = '';
-        }
-        return $token;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function validateAuthKey($authKey)
-    {
-        return $this->getAuthKey() === $authKey;
-//        return $this->authKey === $authKey;
-    }
-
-    /**
-     * Validates password
-     *
-     * @param  string  $password password to validate
-     * @return boolean if password provided is valid for current user
-     */
-    public function validatePassword($password)
-    {
-        try {
-            $b = $this->_storage->comparePassword($password);
-        }
-        catch(\Exception $e) {
-            $b = false;
-        }
-
-        return $b;
-//        return $this->password === $password;
-    }
 
     /**
      * Copy-past from BaseActiveRecord
