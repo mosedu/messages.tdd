@@ -79,7 +79,9 @@ class StorageTest extends TestCase
     public function testPostUserCredential($username, $password) {
         // \Yii::info('test: ' . $username . ' + ' . $password);
         $ob = new Storage();
-        $ob->store = new Session();
+        if( $ob->store === null ) {
+            $ob->store = new Session();
+        }
         $response = $ob->remoteLogin($username, $password);
         \Yii::info('test: ' . $username . ' + ' . $password);
 
@@ -95,6 +97,26 @@ class StorageTest extends TestCase
         $ob->setTokenData($a);
 
         $this->assertFalse($ob->getApiToken() == $a['access_token'], 'Get new token string after refresh');
+
+        $ob->removeTokenData();
+
+//        \Yii::info(' ---------------------------------- Clear session api token data ---------------------------------- ');
+
+        $aData = $ob->getUserByUsername($username, $password);
+
+//        \Yii::info('getUserByUsername() = '. print_r($aData, true));
+
+        $this->assertGreaterThan(2, count($aData), 'User data need to has mare then 2 fields');
+        $this->assertContains($username, [$aData['us_login'], $aData['us_email']], 'Login or email in returned data');
+
+        $aData1 = $ob->getUser($aData['us_id']);
+        $this->assertEquals(count($aData), count($aData1), 'User has same elements as logged user');
+        $this->assertEquals($aData['us_id'], $aData1['us_id'], 'User is same');
+
+        $ob->expireToken();
+        $aData2 = $ob->getUser($aData['us_id']);
+        $this->assertEquals(count($aData), count($aData1), 'User has same elements as logged user after expared');
+        $this->assertEquals($aData['us_id'], $aData1['us_id'], 'User is same after expared');
     }
 
     public function goodRequestDataProvider() {

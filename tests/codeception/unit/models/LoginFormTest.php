@@ -10,7 +10,7 @@ use Codeception\Specify;
 class LoginFormTest extends TestCase
 {
     use Specify;
-/*
+
     protected function tearDown()
     {
         Yii::$app->user->logout();
@@ -24,10 +24,15 @@ class LoginFormTest extends TestCase
             'password' => 'not_existing_password',
         ]);
 
+        $this->assertFalse($model->login(), 'Not logged user with uncorrect credentials');
+        $this->assertTrue(isset($model->errors['password']), 'Set password error message for unlogged user');
+
+/*
         $this->specify('user should not be able to login, when there is no identity', function () use ($model) {
             expect('model should not login user', $model->login())->false();
             expect('user should not be logged in', Yii::$app->user->isGuest)->true();
         });
+*/
     }
 
     public function testLoginWrongPassword()
@@ -37,11 +42,13 @@ class LoginFormTest extends TestCase
             'password' => 'wrong_password',
         ]);
 
+/*
         $this->specify('user should not be able to login with wrong password', function () use ($model) {
             expect('model should not login user', $model->login())->false();
             expect('error message should be set', $model->errors)->hasKey('password');
             expect('user should not be logged in', Yii::$app->user->isGuest)->true();
         });
+*/
     }
 
     public function testLoginCorrect()
@@ -50,12 +57,13 @@ class LoginFormTest extends TestCase
             'username' => 'demo',
             'password' => 'demo',
         ]);
-
+/*
         $this->specify('user should be able to login with correct credentials', function () use ($model) {
             expect('model should login user', $model->login())->true();
             expect('error message should not be set', $model->errors)->hasntKey('password');
             expect('user should be logged in', Yii::$app->user->isGuest)->false();
         });
-    }
 */
+    }
+
 }

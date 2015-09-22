@@ -13,14 +13,25 @@ return [
         ],
     ],
     'components' => [
-        'db' => [
-            'dsn' => 'mysql:host=localhost;dbname=yii2_basic_tests',
-        ],
+//        'db' => [
+//            'dsn' => 'mysql:host=localhost;dbname=yii2_basic_tests',
+//        ],
         'mailer' => [
             'useFileTransport' => true,
         ],
         'urlManager' => [
             'showScriptName' => true,
+        ],
+        'log' => [
+            'targets' => [
+                [
+                    'class' => 'yii\log\FileTarget',
+                    'levels' => ['error', 'warning', 'info', 'trace', ],
+                    'logFile' => '@app/runtime/logs/test.log',
+                    'maxFileSize' => 200,
+                    'maxLogFiles' => 2,
+                ],
+            ],
         ],
     ],
 ];

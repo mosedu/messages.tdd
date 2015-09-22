@@ -11,6 +11,7 @@ namespace app\components;
 use yii;
 use yii\base\InvalidValueException;
 use yii\base\InvalidParamException;
+use yii\web\Session;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -27,8 +28,9 @@ token data:
 
 class Storage extends yii\base\Object
 {
-    const SESSION_DATA_KEY = 'user-data'; // ключик для сохранения данных в сессии
+    const SESSION_DATA_KEY = 'user-data-key'; // ключик для сохранения данных в сессии
     const SESSION_API_KEY = 'user-api-key'; // ключик для сохранения api key в сессии
+    const SESSION_PASS_KEY = 'user-pass-key'; // ключик для сохранения api key в сессии
 
     public $remoteHost = 'http://rbactest.design';
     public $authPath = '/oauthmodule/credential/token';
@@ -36,49 +38,100 @@ class Storage extends yii\base\Object
 
     public $store = null;
 
+    public function __construct() {
+        try {
+            $sess = Yii::$app->session;
+        }
+        catch(\Exception $e) {
+            $sess = null;
+        }
+        $this->store = ( $sess === null ) ? new Session() : Yii::$app->session;
+//        Yii::info('Storage::__construct() Yii::app->session = ' . var_dump());
+    }
 
     public function getUser($id = null)
     {
-        if ($id === null) {
-            // возвращаем текущего пользователя
-            if (!Yii::$app->session->has(self::SESSION_DATA_KEY)) {
-                throw new InvalidValueException('User data not found');
-//                return Yii::$app->session->get(self::SESSION_DATA_KEY, []);
-            }
-            return Yii::$app->session->get(self::SESSION_DATA_KEY);
+        $bExpired = false;
+        try {
+            $aTokenData = $this->getTokenData();
+            $bExpired = $this->isTokenExpired($aTokenData);
         }
-        return $this->loadUser($id);
+        catch( \Exception $e ) {
+            return [];
+        }
+
+        if( $bExpired || !$this->store->has(self::SESSION_DATA_KEY) ) {
+            $aData = $this->loadUser();
+        }
+        else {
+            $aData = $this->store->get(self::SESSION_DATA_KEY);
+            if( ($id !== null) && ($aData['us_id'] != $id) ) {
+                $aData = [];
+            }
+        }
+
+        return $aData;
     }
 
-    public function loadUser($id)
+    public function loadUser($id = null)
     {
-        $client = new Client();
+        $aUserData = [];
         try {
-            $res = $client->request(
-                'GET',
-                $this->remoteHost . $this->dataPath,
-                [
-                    'auth' => $this->getApiKey(),
+            $res = $this->makeRequest([
+                'method' => 'GET',
+                'url' => $this->remoteHost . $this->dataPath,
+                'data' => [
+                    'access_token' => $this->getApiToken(),
                 ]
-            );
-        } catch (ServerException $e) {
-            Yii::error('Error loadUser(' . $id . '): ServerException ' . $e->getMessage());
-            // тут что-то с сервером, нужно будет подождать До очередного запроса
-            return 'Server error';
-        } catch (ClientException $e) {
-            Yii::error('Error loadUser(' . $id . '): ClientException ' . $e->getMessage());
-            $res = $e->getResponse();
-            $aData = json_decode($res->getBody()->getContents(), true);
-            if (is_array($aData) && isset($aData['status']) && ($aData['status'] < 500)) {
-                // тут пользователь отключен, нужно убить все права
-            }
-            return $aData;
-        } catch (\Exception $e) {
-            Yii::error('Error loadUser(' . $id . '): Exception ' . $e->getMessage());
-            return $e->getMessage();
+            ]);
+        }
+        catch(\Exception $e) {
+            return $aUserData;
         }
 
-        return $res->getBody()->getContents();
+        if ($res['statuscode'] == 200) {
+            $aUserData = json_decode($res['response']->getBody()->getContents(), true);
+            Yii::info('loadUser('.$id.'): aUserData = ' . print_r($aUserData, true));
+            if( ($id !== null) && ($aUserData['us_id'] != $id) ) {
+                Yii::info('loadUser('.$id.'): '.$aUserData['us_id'].' != ' . $id);
+                $aUserData = [];
+            }
+            else {
+                Yii::info('loadUser('.$id.'): store');
+                $this->store->set(self::SESSION_DATA_KEY, $aUserData);
+            }
+        } else {
+            if ($res['statuscode'] < 500) {
+                // тут пользователь отключен, нужно убить все права
+                $aUserData = [];
+            } else {
+                // тут что-то с сервером, нужно будет подождать До очередного запроса
+                $aUserData = [];
+            }
+        }
+        return $aUserData;
+    }
+
+    public function getUserByUsername($name, $pass)
+    {
+        $keyData = [];
+        try {
+            $keyData = $this->getTokenData();
+        }
+        catch(\Exception $e) {
+            $keyData = $this->remoteLogin($name, $pass);
+            try {
+                $this->setTokenData($keyData);
+            }
+            catch(\Exception $e) {
+                //
+            }
+        }
+
+        if( !isset($keyData['access_token']) ) {
+            return [];
+        }
+        return $this->loadUser();
     }
 
     /**
@@ -88,16 +141,25 @@ class Storage extends yii\base\Object
     public function getTokenData()
     {
         if ($this->store === null) {
-            Yii::info('setTokenData($aData): error no storage for API token');
+            Yii::info('getTokenData(): error no storage for API token');
             throw new InvalidValueException('Not found storage for API token');
         }
 
         if (!$this->store->has(self::SESSION_API_KEY)) {
-            Yii::info('setTokenData($aData): error Not found Api token');
+            Yii::info('getTokenData(): error Not found Api token');
             throw new InvalidValueException('Not found Api token');
         }
 
         return $this->store->get(self::SESSION_API_KEY);
+    }
+
+    public function comparePassword($pass)
+    {
+        $b = false;
+        if( ($this->store !== null) && $this->store->has(self::SESSION_PASS_KEY) ) {
+            $b = ($this->store->get(self::SESSION_PASS_KEY) == $pass);
+        }
+        return $b;
     }
 
     /**
@@ -114,6 +176,19 @@ class Storage extends yii\base\Object
 
         Yii::info('setTokenData(): ' . print_r($aData, true));
         return $this->store->set(self::SESSION_API_KEY, $aData);
+    }
+
+    /**
+     * Удаляем данные по токену в хранилище
+     * @return string
+     */
+    public function removeTokenData()
+    {
+        if ($this->store !== null) {
+            Yii::info('removeTokenData()');
+            $this->store->remove(self::SESSION_API_KEY);
+        }
+
     }
 
     /**
@@ -145,8 +220,23 @@ class Storage extends yii\base\Object
         if( !isset($aData['expires_in']) ) {
             throw new InvalidValueException('Not found token expired time');
         }
-        Yii::info('isTokenExpired(): ' . $aData['expires_in'] . ' > ' . time() . ' -> ' . ($aData['expires_in'] > time() ? 'true' : 'false'));
+        Yii::info('isTokenExpired(): ' . $aData['expires_in'] . ' < ' . time() . ' -> ' . ($aData['expires_in'] < time() ? 'true' : 'false'));
         return ($aData['expires_in'] < time());
+    }
+
+    /**
+     *
+     */
+    public function expireToken()
+    {
+        try {
+            $aData = $this->getTokenData();
+            $aData['expires_in'] = time() - 10;
+            $this->setTokenData($aData);
+        }
+        catch(\Exception $e) {
+            //
+        }
     }
 
     /**
@@ -182,7 +272,7 @@ class Storage extends yii\base\Object
             Yii::info('refreshToken(): refresh token aKey = ' . print_r($aKey, true));
             $aKey['expires_in'] = time() + $aKey['expires_in'];
         } else {
-            if ($aData['statuscode'] < 500) {
+            if ($res['statuscode'] < 500) {
                 // тут пользователь отключен, нужно убить все права
                 $aKey = [];
             } else {
@@ -223,10 +313,12 @@ class Storage extends yii\base\Object
             $aKey = json_decode($aData['response']->getBody()->getContents(), true);
             Yii::info('remoteLogin() aKey = ' . print_r($aKey, true));
             $aKey['expires_in'] = time() + $aKey['expires_in'];
+            $this->store->set(self::SESSION_PASS_KEY, $password);
         }
         else  if($aData['statuscode'] < 500) {
             // тут пользователь отключен, нужно убить все права
             $aKey = [];
+            $this->store->remove(self::SESSION_PASS_KEY);
         }
         else {
             // тут что-то с сервером, нужно будет подождать До очередного запроса
