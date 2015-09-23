@@ -2,11 +2,13 @@
 
 use yii\helpers\ArrayHelper;
 
+
 $sfParams = __DIR__ . DIRECTORY_SEPARATOR . 'params-local.php';
+$aLocalParams = file_exists($sfParams) ? require($sfParams) : [];
 
 $params = ArrayHelper::merge(
     require(__DIR__ . '/params.php'),
-    file_exists($sfParams) ? require($sfParams) : []
+    $aLocalParams
 );
 // $params = require(__DIR__ . '/params.php');
 
@@ -19,10 +21,10 @@ $config = [
             'class' => 'yii\db\Connection',
             'charset' => 'utf8',
         ],
-//        'authManager' => [
-//            'class' => 'yii\rbac\PhpManager',
-//            'defaultRoles' => ['another' , 'maintainer'], //
-//        ],
+        'authManager' => [
+            'class' => 'yii\rbac\PhpManager',
+            'defaultRoles' => array_keys($aLocalParams['user.groups']),
+        ],
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,

@@ -5,6 +5,7 @@ use app\components\Storage;
 /* @var $this yii\web\View */
 
 $this->title = 'My Yii Application';
+/*
 $ob = new Storage();
 $username = 'alfmaster@alfmaster.ru';
 $password = '7876765';
@@ -15,7 +16,13 @@ if( is_array($res) && isset($res['expires_in']) ) {
 
 $data = $ob->loadUser(47);
 //        echo $res->getBody();
-
+*/
+$aPermission = [
+    'createMessage',
+    'updateMessage',
+    'user',
+    'admin',
+];
 ?>
 <div class="site-index">
 
@@ -33,8 +40,18 @@ $data = $ob->loadUser(47);
             <div class="col-lg-4">
                 <h2>Heading</h2>
 
-                <p><?= nl2br(print_r($res, true)) ?></p>
-                <p><?= nl2br(print_r($data, true)) ?></p>
+                <p><?= Yii::$app->user->isGuest ? 'guest' : 'user' ?></p>
+                <p><?= implode(', ', Yii::$app->authManager->defaultRoles) ?></p>
+                <?php
+
+                foreach( $aPermission as $v ) {
+                    echo '<p>' . $v . ' : ' . (Yii::$app->user->can($v) ? 'true' : 'false') . '</p>';
+                }
+
+
+                ?>
+                <p><?= '' // nl2br(print_r($res, true)) ?></p>
+                <p><?= '' // nl2br(print_r($data, true)) ?></p>
 
                 <p><a class="btn btn-default" href="http://www.yiiframework.com/doc/">Yii Documentation &raquo;</a></p>
             </div>

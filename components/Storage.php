@@ -91,13 +91,13 @@ class Storage extends yii\base\Object
 
         if ($res['statuscode'] == 200) {
             $aUserData = json_decode($res['response']->getBody()->getContents(), true);
-            Yii::info('loadUser('.$id.'): aUserData = ' . print_r($aUserData, true));
+//            Yii::info('loadUser('.$id.'): aUserData = ' . print_r($aUserData, true));
             if( ($id !== null) && ($aUserData['us_id'] != $id) ) {
-                Yii::info('loadUser('.$id.'): '.$aUserData['us_id'].' != ' . $id);
+//                Yii::info('loadUser('.$id.'): '.$aUserData['us_id'].' != ' . $id);
                 $aUserData = [];
             }
             else {
-                Yii::info('loadUser('.$id.'): store');
+//                Yii::info('loadUser('.$id.'): store');
                 $this->store->set(self::SESSION_DATA_KEY, $aUserData);
             }
         } else {
@@ -115,10 +115,13 @@ class Storage extends yii\base\Object
     public function getUserByUsername($name, $pass)
     {
         $keyData = [];
+/*
+
         try {
             $keyData = $this->getTokenData();
         }
         catch(\Exception $e) {
+*/
             $keyData = $this->remoteLogin($name, $pass);
             try {
                 $this->setTokenData($keyData);
@@ -126,7 +129,7 @@ class Storage extends yii\base\Object
             catch(\Exception $e) {
                 //
             }
-        }
+//        }
 
         if( !isset($keyData['access_token']) ) {
             return [];
@@ -174,7 +177,7 @@ class Storage extends yii\base\Object
             throw new InvalidValueException('Not found storage for API token');
         }
 
-        Yii::info('setTokenData(): ' . print_r($aData, true));
+//        Yii::info('setTokenData(): ' . print_r($aData, true));
         return $this->store->set(self::SESSION_API_KEY, $aData);
     }
 
@@ -185,7 +188,7 @@ class Storage extends yii\base\Object
     public function removeTokenData()
     {
         if ($this->store !== null) {
-            Yii::info('removeTokenData()');
+//            Yii::info('removeTokenData()');
             $this->store->remove(self::SESSION_API_KEY);
         }
 
@@ -220,7 +223,7 @@ class Storage extends yii\base\Object
         if( !isset($aData['expires_in']) ) {
             throw new InvalidValueException('Not found token expired time');
         }
-        Yii::info('isTokenExpired(): ' . $aData['expires_in'] . ' < ' . time() . ' -> ' . ($aData['expires_in'] < time() ? 'true' : 'false'));
+//        Yii::info('isTokenExpired(): ' . $aData['expires_in'] . ' < ' . time() . ' -> ' . ($aData['expires_in'] < time() ? 'true' : 'false'));
         return ($aData['expires_in'] < time());
     }
 
@@ -269,7 +272,7 @@ class Storage extends yii\base\Object
 
         if ($res['statuscode'] == 200) {
             $aKey = json_decode($res['response']->getBody()->getContents(), true);
-            Yii::info('refreshToken(): refresh token aKey = ' . print_r($aKey, true));
+//            Yii::info('refreshToken(): refresh token aKey = ' . print_r($aKey, true));
             $aKey['expires_in'] = time() + $aKey['expires_in'];
         } else {
             if ($res['statuscode'] < 500) {
@@ -291,7 +294,7 @@ class Storage extends yii\base\Object
      * @return array
      */
     public function remoteLogin($username, $password) {
-        Yii::info('remoteLogin('.$username.', '.$password.')');
+//        Yii::info('remoteLogin('.$username.', '.$password.')');
 
         $bodyParams = array(
             'client_id'     => $_SERVER['HTTP_HOST'],
@@ -311,7 +314,7 @@ class Storage extends yii\base\Object
 
         if( $aData['statuscode'] == 200 ) {
             $aKey = json_decode($aData['response']->getBody()->getContents(), true);
-            Yii::info('remoteLogin() aKey = ' . print_r($aKey, true));
+//            Yii::info('remoteLogin() aKey = ' . print_r($aKey, true));
             $aKey['expires_in'] = time() + $aKey['expires_in'];
             $this->store->set(self::SESSION_PASS_KEY, $password);
         }
@@ -338,7 +341,7 @@ class Storage extends yii\base\Object
      * @return array
      */
     public function makeRequest($param) {
-        Yii::info('makeRequest() ' . print_r($param, true));
+//        Yii::info('makeRequest() ' . print_r($param, true));
         $aData = [
             'response' => null,
             'statuscode' => 0,
@@ -379,7 +382,7 @@ class Storage extends yii\base\Object
             }
 
 
-            Yii::info('makeRequest('.$param['method'].', '.$param['url'].') ' . print_r($aDop, true));
+//            Yii::info('makeRequest('.$param['method'].', '.$param['url'].') ' . print_r($aDop, true));
             $res = $client->request(
                 $param['method'],
                 $param['url'],

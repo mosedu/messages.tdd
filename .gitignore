@@ -31,3 +31,6 @@ runtime
 /config/db*.php
 /web/upload
 *-local.php
+/rbac/assignments.php
+/rbac/items.php
+/rbac/rules.php

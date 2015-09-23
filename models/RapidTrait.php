@@ -8,6 +8,7 @@
 
 namespace app\models;
 
+use yii;
 use app\components\Storage;
 
 trait RapidTrait {
@@ -26,6 +27,7 @@ trait RapidTrait {
             $user = new static();
             $user->_storage = $ob;
         }
+        Yii::info('findIdentity('.$id.'): ' . ($user === null ? 'null' : 'USER'));
         return $user;
     }
 
@@ -45,6 +47,7 @@ trait RapidTrait {
         catch(\Exception $e) {
             //
         }
+        Yii::info('findIdentityByAccessToken('.$token.', '.$type.'): ' . ($user === null ? 'null' : 'USER'));
 
         return $user;
     }
@@ -67,6 +70,7 @@ trait RapidTrait {
         catch(\Exception $e) {
             //
         }
+        Yii::info('findByUsername('.$username.', '.$password.'): ' . ($user === null ? 'null' : 'USER'));
 
         return $user;
     }
@@ -82,6 +86,22 @@ trait RapidTrait {
         catch(\Exception $e) {
             $id = 0;
         }
+        Yii::info('getId(): ' . $id);
+        return $id;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getUsername()
+    {
+        try {
+            $id = $this->us_login;
+        }
+        catch(\Exception $e) {
+            $id = '';
+        }
+        Yii::info('getUsername(): ' . $id);
         return $id;
     }
 
@@ -96,6 +116,7 @@ trait RapidTrait {
         catch(\Exception $e) {
             $token = '';
         }
+        Yii::info('getAuthKey(): ' . $token);
         return $token;
     }
 
@@ -123,6 +144,7 @@ trait RapidTrait {
             $b = false;
         }
 
+        Yii::info('validatePassword('.$password.'): ' . ($b ? 'true' : 'false'));
         return $b;
 //        return $this->password === $password;
     }
