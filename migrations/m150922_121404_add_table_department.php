@@ -22,6 +22,8 @@ class m150922_121404_add_table_department extends Migration
             'dus_dep_id' => Schema::TYPE_INTEGER . ' NOT NULL DEFAULT 0 Comment \'Отдел\'',
         ], $tableOptionsMyISAM);
 
+        $this->refreshCache();
+
     }
 
     public function down()

@@ -25,6 +25,25 @@ class RolesController extends Controller
         $rule = new \app\rbac\UserGroupRule;
         $auth->add($rule);
 
+        $createDep = $auth->createPermission('createDepartment');
+        $createDep->description = 'Create a department';
+        $auth->add($createDep);
+
+        $updateDep = $auth->createPermission('updateDepartment');
+        $updateDep->description = 'Update a department';
+        $auth->add($updateDep);
+
+        $viewDep = $auth->createPermission('viewDepartment');
+        $viewDep->description = 'View a department';
+        $auth->add($viewDep);
+
+        $workDep = $auth->createPermission('workDepartment');
+        $workDep->description = 'Work with a department';
+        $auth->add($workDep);
+        $auth->addChild($workDep, $viewDep);
+        $auth->addChild($workDep, $createDep);
+        $auth->addChild($workDep, $updateDep);
+
         $createMsg = $auth->createPermission('createMessage');
         $createMsg->description = 'Create a message';
         $auth->add($createMsg);
@@ -42,6 +61,7 @@ class RolesController extends Controller
         $admin = $auth->createRole('admin');
         $admin->ruleName = $rule->name;
         $auth->add($admin);
+        $auth->addChild($admin, $workDep);
         $auth->addChild($admin, $updateMsg);
         $auth->addChild($admin, $user);
         echo "Create admin\n";
