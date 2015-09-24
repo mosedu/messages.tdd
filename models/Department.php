@@ -5,6 +5,7 @@ namespace app\models;
 use Yii;
 
 use app\models\Depusers;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "{{%department}}".
@@ -52,5 +53,19 @@ class Department extends \yii\db\ActiveRecord
             Depusers::className(),
             ['dus_dep_id' => 'dep_id']
         );
+    }
+
+    /**
+     * @return static[]
+     */
+    public static function getAll() {
+        return self::findAll(['dep_active' => 1]);
+    }
+
+    /**
+     * @return array
+     */
+    public static function getList() {
+        return ArrayHelper::map(self::getAll(), 'dep_id', 'dep_title');
     }
 }

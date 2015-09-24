@@ -18,11 +18,16 @@ $data = $ob->loadUser(47);
 //        echo $res->getBody();
 */
 $aPermission = [
+    'viewDepartment',
+    'createDepartment',
+    'updateDepartment',
+    'workDepartment',
     'createMessage',
     'updateMessage',
     'user',
     'admin',
 ];
+
 ?>
 <div class="site-index">
 
@@ -38,7 +43,7 @@ $aPermission = [
 
         <div class="row">
             <div class="col-lg-4">
-                <h2>Heading</h2>
+                <h2>Permissions</h2>
 
                 <p><?= Yii::$app->user->isGuest ? 'guest' : 'user' ?></p>
                 <p><?= implode(', ', Yii::$app->authManager->defaultRoles) ?></p>

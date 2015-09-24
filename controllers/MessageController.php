@@ -8,6 +8,9 @@ use app\models\MessageSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\filters\AccessControl;
+use yii\widgets\ActiveForm;
+use yii\web\Response;
 
 /**
  * MessageController implements the CRUD actions for Message model.
@@ -21,6 +24,17 @@ class MessageController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'delete' => ['post'],
+                ],
+            ],
+            'access' => [
+                'class' => AccessControl::className(),
+                'only' => ['create', 'index', 'update'],
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['create', 'index', 'update'],
+                        'roles' => ['@'],
+                    ],
                 ],
             ],
         ];
@@ -60,6 +74,8 @@ class MessageController extends Controller
      */
     public function actionCreate()
     {
+        return $this->actionUpdate(0);
+/*
         $model = new Message();
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
@@ -69,6 +85,7 @@ class MessageController extends Controller
                 'model' => $model,
             ]);
         }
+*/
     }
 
     /**
@@ -79,10 +96,25 @@ class MessageController extends Controller
      */
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
+        if( $id == 0 ) {
+            $model = new Message();
+            $model->loadDefaultValues();
+        }
+        else {
+            $model = $this->findModel($id);
+        }
+
+        if( Yii::$app->request->isAjax ) {
+            if( $model->load(Yii::$app->request->post()) ) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                $aValidate = ActiveForm::validate($model);
+                return $aValidate;
+            }
+        }
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->msg_id]);
+            return $this->redirect(['index', ]);
+//            return $this->redirect(['view', 'id' => $model->msg_id]);
         } else {
             return $this->render('update', [
                 'model' => $model,

@@ -5,10 +5,10 @@ use yii\helpers\Html;
 /* @var $this yii\web\View */
 /* @var $model app\models\Message */
 
-$this->title = 'Update Message: ' . ' ' . $model->msg_id;
-$this->params['breadcrumbs'][] = ['label' => 'Messages', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->msg_id, 'url' => ['view', 'id' => $model->msg_id]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = $model->isNewRecord ? 'Создать обращение' : ('Изменить : ' . $model->dep_title);
+$this->params['breadcrumbs'][] = ['label' => 'Обращения', 'url' => ['index']];
+//$this->params['breadcrumbs'][] = ['label' => $model->msg_id, 'url' => ['view', 'id' => $model->msg_id]];
+$this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="message-update">
 

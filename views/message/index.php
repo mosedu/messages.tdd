@@ -2,12 +2,13 @@
 
 use yii\helpers\Html;
 use yii\grid\GridView;
+use app\models\Message;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\MessageSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
-$this->title = 'Messages';
+$this->title = 'Обращения';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="message-index">
@@ -16,20 +17,49 @@ $this->params['breadcrumbs'][] = $this->title;
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
 
     <p>
-        <?= Html::a('Create Message', ['create'], ['class' => 'btn btn-success']) ?>
+        <?= Html::a('Создать обращение', ['create'], ['class' => 'btn btn-success']) ?>
     </p>
 
     <?= GridView::widget([
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
         'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
+//            ['class' => 'yii\grid\SerialColumn'],
+            [
+                'class' => 'yii\grid\DataColumn',
+                'attribute' => 'msg_id',
+                'content' => function ($model, $key, $index, $column) {
+                    /** @var Message $model */
+                    return Html::encode($model->msg_id)
+                    . '<br />'
+                    . Html::encode($model->getType('short'));
+                },
+                'contentOptions' => [
+                    'class' => 'griddate',
+                    'style' => 'width: 70px;'
+                ],
+            ],
 
-            'msg_id',
-            'msg_type',
-            'msg_dep_id',
+            [
+                'class' => 'yii\grid\DataColumn',
+                'attribute' => 'msg_person',
+                'content' => function ($model, $key, $index, $column) {
+                    /** @var Message $model */
+                    return Html::encode($model->msg_person)
+                    . ($model->msg_email ? ('<br />' . $model->msg_email) : '')
+                    . ($model->msg_phone ? ('<br />' . $model->msg_phone) : '');
+                },
+                'contentOptions' => [
+                    'class' => 'griddate',
+                    'style' => 'width: 70px;'
+                ],
+            ],
+
+//            'msg_id',
+//            'msg_type',
+//            'msg_dep_id',
             'msg_created',
-            'msg_person',
+//            'msg_person',
             // 'msg_email:email',
             // 'msg_phone',
             // 'msg_subject',

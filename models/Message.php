@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "{{%message}}".
@@ -31,6 +32,24 @@ use Yii;
  */
 class Message extends \yii\db\ActiveRecord
 {
+    public static $types = [
+        1 => [
+                'long' => 'Обращение гражданина по электронной почте',
+                'short' => 'Гражданин email',
+            ],
+        2 => [
+                'long' => 'Обращение гражданина по телефону',
+                'short' => 'Гражданин тел.',
+            ],
+        3 => [
+                'long' => 'Oбращение образовательной организации по электронной почте',
+                'short' => 'Организация email',
+            ],
+        4 => [
+                'long' => 'Обращение образовательной организации по телефону',
+                'short' => 'Организация тел.',
+            ],
+    ];
     /**
      * @inheritdoc
      */
@@ -45,8 +64,9 @@ class Message extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['msg_type', 'msg_dep_id', 'msg_status', 'msg_child_birth', 'msg_person', 'msg_email', 'msg_phone', 'msg_subject', 'msg_child', 'msg_ekis_id', ], 'required'],
             [['msg_type', 'msg_dep_id', 'msg_user_id', 'msg_status'], 'integer'],
-            [['msg_created'], 'required'],
+//            [['msg_created'], 'required'],
             [['msg_created', 'msg_child_birth', 'msg_user_setted', 'msg_answer_period', 'msg_answer_time', 'msg_talk_start', 'msg_talk_finish'], 'safe'],
             [['msg_text', 'msg_answer', 'msg_comment'], 'string'],
             [['msg_person', 'msg_email', 'msg_phone', 'msg_subject', 'msg_child', 'msg_ekis_id'], 'string', 'max' => 255]
@@ -81,5 +101,22 @@ class Message extends \yii\db\ActiveRecord
             'msg_talk_start' => 'Начало разговора',
             'msg_talk_finish' => 'Окончание разговора',
         ];
+    }
+
+    /**
+     * @param string $sFld
+     * @return string
+     */
+    public function getType($sFld = 'long') {
+        return self::$types[$this->msg_type][$sFld];
+    }
+
+    public static function getAllTypes($sFld = 'long') {
+        $a = [];
+        foreach(self::$types as $k=>$v ) {
+            $a[$k] = $v[$sFld];
+        }
+
+        return $a;
     }
 }

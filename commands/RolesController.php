@@ -62,6 +62,7 @@ class RolesController extends Controller
         $admin->ruleName = $rule->name;
         $auth->add($admin);
         $auth->addChild($admin, $workDep);
+        $auth->addChild($admin, $createMsg);
         $auth->addChild($admin, $updateMsg);
         $auth->addChild($admin, $user);
         echo "Create admin\n";
